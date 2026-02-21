@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FriendZone Live Chat</title>
+    <style>
+        /* --- CSS STYLES --- */
+        :root {
+            --primary-color: #075e54;
+            --secondary-color: #25d366;
+            --bg-color: #e5ddd5;
+            --chat-bg: #efe7dd;
+            --my-msg-bg: #dcf8c6;
+            --other-msg-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Login Screen */
+        #login-screen {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 300px;
+        }
+
+        #login-screen h2 { margin-bottom: 20px; color: var(--primary-color); }
+        
+        select, input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: #054c44; }
+
+        /* Main Chat App Container */
+        #app-container {
+            display: none;
+            width: 90%;
+            max-width: 1000px;
+            height: 90vh;
+            background-color: var(--bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+        }
+
+        /* Sidebar (Friend List) */
+        .sidebar {
+            width: 30%;
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .friend-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .friend-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f1f1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .friend-item:hover { background-color: #f5f5f5; }
+        .friend-item.active { background-color: #e0e0e0; }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #ccc;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-left: auto;
+            position: relative;
+        }
+
+        /* The Live Green Dot */
+        .status-indicator.live {
+            background-color: var(--secondary-color);
+            box-shadow: 0 0 5px var(--secondary-color);
+        }
+
+        /* Chat Area */
+        .chat-area {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-repeat: repeat;
+            background-color: var(--chat-bg);
+        }
+
+        .chat-header {
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 60%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background-color: var(--other-msg-bg);
+            border-top-left-radius: 0;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background-color: var(--my-msg-bg);
+            border-top-right-radius: 0;
+        }
+
+        .message .time {
+            font-size: 10px;
+            color: #999;
+            float: right;
+            margin-left: 10px;
+            margin-top: 5px;
+        }
+
+        .input-area {
+            padding: 15px;
+            background-color: #fff;
+            display: flex;
+            gap: 10px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <h2>CHATBOOK Prot</h2>
+        <p>Select your name and enter password</p>
+        
+        <select id="username-select">
+            <option value="Prince">Prince</option>
+            <option value="Meet">Meet</option>
+            <option value="Harsh">Harsh</option>
+            <option value="Sukhdev">Sukhdev</option>
+        </select>
+        
+        <input type="password" id="password-input" placeholder="Enter Password">
+        <button onclick="login()">Login</button>
+        <p id="login-error" style="color: red; font-size: 12px; display: none;">Incorrect Password!</p>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div id="app-container" class="hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Friends</h3>
+                <span id="my-status-text" style="font-size: 12px;">Online</span>
+            </div>
+            <div class="friend-list" id="friend-list">
+                <!-- Friends generated by JS -->
+            </div>
+        </div>
+
+        <!-- Chat Window -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="avatar" id="chat-avatar" style="background-color: var(--primary-color);">?</div>
+                <div>
+                    <h3 id="chat-name">Select a friend</h3>
+                    <small id="chat-status">Offline</small>
+                </div>
+            </div>
+            
+            <div class="messages" id="messages">
+                <div style="text-align: center; color: #888; margin-top: 50px;">
+                    Welcome! Select a friend to start chatting.<br>
+                    (Others will reply automatically)
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="Type a message..." onkeypress="handleEnter(event)">
+                <button onclick="sendMessage()" style="width: auto; padding: 0 20px;">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- JAVASCRIPT LOGIC --- */
+
+        // 1. Configuration: Users and Passwords
+        const users = {
+            "Prince": "prince123",
+            "Meet": "meet123",
+            "Harsh": "harsh123",
+            "Sukhdev": "sukhdev123"
+        };
+
+        let currentUser = null;
+        let activeFriends = [];
+        let selectedFriend = null;
+
+        // Colors for avatars
+        const colors = { "Prince": "#e91e63", "Meet": "#2196f3", "Harsh": "#ff9800", "Sukhdev": "#9c27b0" };
+
+        // Auto replies simulation
+        const autoReplies = [
+            "Haha, that's funny! 😂",
+            "Bro, really?",
+            "Okay, got it!",
+            "Let's meet sometime!",
+            "Na bhai, busy hu abhi 😄",
+            "Kya chal raha hai?",
+            "Send me that link!",
+            " Chal be, Rukja 😎",
+            "Nice one!",
+            "Thik hai, baad me baat karta hu"
+        ];
+
+        // 2. Login Function
+        function login() {
+            const name = document.getElementById('username-select').value;
+            const pass = document.getElementById('password-input').value;
+            const errorMsg = document.getElementById('login-error');
+
+            if (users[name] === pass) {
+                currentUser = name;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                document.getElementById('app-container').classList.remove('hidden');
+                
+                initApp();
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        // 3. Initialize App
+        function initApp() {
+            renderSidebar();
+            startSimulation();
+        }
+
+        // 4. Render Sidebar (Friend List)
+        function renderSidebar() {
+            const list = document.getElementById('friend-list');
+            list.innerHTML = '';
+
+            Object.keys(users).forEach(friend => {
+                if (friend === currentUser) return;
+
+                const div = document.createElement('div');
+                div.className = 'friend-item';
+                div.onclick = () => selectFriend(friend);
+
+                const isLive = activeFriends.includes(friend);
+                const dotClass = isLive ? 'status-indicator live' : 'status-indicator';
+
+                div.innerHTML = `
+                    <div class="avatar" style="background-color: ${colors[friend]}">${friend[0]}</div>
+                    <div>
+                        <strong>${friend}</strong><br>
+                        <small style="color: ${isLive ? '#25d366' : '#888'}">${isLive ? 'Active now' : 'Offline'}</small>
+                    </div>
+                    <div class="${dotClass}"></div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // 5. Select a Friend to Chat With
+        function selectFriend(friend) {
+            selectedFriend = friend;
+            
+            document.getElementById('chat-name').innerText = friend;
+            document.getElementById('chat-avatar').style.backgroundColor = colors[friend];
+            document.getElementById('chat-avatar').innerText = friend[0];
+            
+            const isLive = activeFriends.includes(friend);
+            const statusText = document.getElementById('chat-status');
+            statusText.innerText = isLive ? "Online" : "Offline";
+            statusText.style.color = isLive ? "#25d366" : "#888";
+
+            const msgContainer = document.getElementById('messages');
+            msgContainer.innerHTML = `<div style="text-align: center; color: #888; margin-bottom: 10px;">Chat history with ${friend}</div>`;
+            
+            addMessageBubble(friend, "Hey! What's up?", false);
+        }
+
+        // 6. Send Message Logic
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            
+            if (text === "" || !selectedFriend) return;
+
+            // Add my message
+            addMessageBubble(currentUser, text, true);
+            input.value = '';
+
+            // Simulate reply after 1-3 seconds
+            setTimeout(() => {
+                const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
+                addMessageBubble(selectedFriend, randomReply, false);
+                
+                // Update sidebar to show friend is live
+                if (!activeFriends.includes(selectedFriend)) {
+                    activeFriends.push(selectedFriend);
+                    renderSidebar();
+                }
+            }, 1000 + Math.random() * 2000);
+        }
+
+        // 7. Add Message Bubble to Chat
+        function addMessageBubble(sender, text, isSent) {
+            const msgContainer = document.getElementById('messages');
+            const msgDiv = document.createElement('div');
+            
+            msgDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            msgDiv.innerHTML = `
+                ${text}
+                <span class="time">${time}</span>
+            `;
+            
+            msgContainer.appendChild(msgDiv);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        // 8. Simulation: Make friends come online/offline randomly
+        function startSimulation() {
+            // Make all friends online initially
+            activeFriends = Object.keys(users).filter(u => u !== currentUser);
+            renderSidebar();
+
+            // Randomly toggle friends online/offline every 5-10 seconds
+            setInterval(() => {
+                const friends = Object.keys(users).filter(u => u !== currentUser);
+                const randomFriend = friends[Math.floor(Math.random() * friends.length)];
+                
+                if (activeFriends.includes(randomFriend)) {
+                    // Remove from active (go offline)
+                    activeFriends = activeFriends.filter(f => f !== randomFriend);
+                } else {
+                    // Add to active (come online)
+                    if (!activeFriends.includes(randomFriend)) {
+                        activeFriends.push(randomFriend);
+                    }
+                }
+                
+                renderSidebar();
+                
+                // If chatting with this friend, update header status
+                if (selectedFriend === randomFriend) {
+                    const statusText = document.getElementById('chat-status');
+                    const isLive = activeFriends.includes(randomFriend);
+                    statusText.innerText = isLive ? "Online" : "Offline";
+                    statusText.style.color = isLive ? "#25d366" : "#888";
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
